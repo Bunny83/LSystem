@@ -1,6 +1,6 @@
 # LSystem
 
-LSystem.cs implements a simple axiom and rules based [Lindenmeyer system][1]
+LSystem.cs implements a simple axiom and rules based [Lindenmayer system][1]
 
 LogicExpressionParser.cs allows to parse logic or numeric expressions given as string into a custom expression tree
 
