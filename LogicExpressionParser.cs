@@ -509,8 +509,8 @@ namespace B83.LogicExpressionParser
             });
             AddFunction("clamp", (p) => {
                 var p0 = p[0];
-                var p1 = p[0];
-                var p2 = p[0];
+                var p1 = p[1];
+                var p2 = p[2];
                 return p0 < p1 ? p1 : (p0 > p2) ? p2 : p0;
             });
             AddFunction("clamp01", (p) => {
