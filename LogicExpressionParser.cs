@@ -18,9 +18,10 @@
 * [History]
 * 2016.11.24 - project start
 * 2017.08.20 - first release version.
+* 2023.04.23 - added proper culture support
 * 
 * [License]
-* Copyright (c) 2017 Markus Göbel (Bunny83)
+* Copyright (c) 2023 Markus Göbel (Bunny83)
 * 
 * Permission is hereby granted, free of charge, to any person obtaining a copy
 * of this software and associated documentation files (the "Software"), to
@@ -44,6 +45,7 @@
 #endregion License and Information
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace B83.LogicExpressionParser
 {
@@ -105,11 +107,9 @@ namespace B83.LogicExpressionParser
     #endregion logic gates
 
     #region Arithmetic gates
-
     public class OperationAdd : INumberProvider
     {
         public List<INumberProvider> inputs = new List<INumberProvider>();
-
         public double GetNumber()
         {
             double res = 0d;
@@ -129,7 +129,6 @@ namespace B83.LogicExpressionParser
             }
         }
     }
-
     public class OperationNegate : INumberProvider
     {
         public INumberProvider input;
@@ -142,11 +141,9 @@ namespace B83.LogicExpressionParser
             input = aInput;
         }
     }
-
     public class OperationProduct : INumberProvider
     {
         public List<INumberProvider> inputs = new List<INumberProvider>();
-
         public double GetNumber()
         {
             double res = 1d;
@@ -166,8 +163,6 @@ namespace B83.LogicExpressionParser
             }
         }
     }
-
-
     public class OperationReciprocal : INumberProvider
     {
         public INumberProvider input;
@@ -180,7 +175,6 @@ namespace B83.LogicExpressionParser
             input = aInput;
         }
     }
-
     public class OperationPower : INumberProvider
     {
         public INumberProvider value;
@@ -209,9 +203,6 @@ namespace B83.LogicExpressionParser
             return m_Func(m_Params);
         }
     }
-
-
-
     #endregion Arithmetic gates
 
     #region compare gates
@@ -279,7 +270,6 @@ namespace B83.LogicExpressionParser
         public ILogicResult val;
         public double GetNumber() { return val.GetResult() ? 1d : 0d; }
     }
-
     public class ValueProvider : INumberProvider, ILogicResult
     {
         protected ILogicResult m_BoolVal = null;
@@ -337,7 +327,6 @@ namespace B83.LogicExpressionParser
             m_BoolVal = null;
         }
     }
-
     public class ExpressionVariable : ValueProvider
     {
         public string Name { get; private set; }
@@ -346,7 +335,6 @@ namespace B83.LogicExpressionParser
             Name = aName;
         }
     }
-
     public class ParameterList : INumberProvider
     {
         public List<INumberProvider> inputs = new List<INumberProvider>();
@@ -375,7 +363,6 @@ namespace B83.LogicExpressionParser
             return aIndex < inputs.Count && aIndex >= 0;
         }
     }
-
     public class LogicExpression : ILogicResult
     {
         public bool GetResult() { return expressionTree.GetResult(); }
@@ -395,7 +382,6 @@ namespace B83.LogicExpressionParser
             context = aContext;
         }
     }
-
     public class NumberExpression : INumberProvider
     {
         public double GetNumber() { return expressionTree.GetNumber(); }
@@ -415,7 +401,6 @@ namespace B83.LogicExpressionParser
             context = aContext;
         }
     }
-
     #endregion value providers
 
     #region Expression & Parsing Context
@@ -465,13 +450,26 @@ namespace B83.LogicExpressionParser
 
     public class ParsingContext
     {
+        private CultureInfo m_Culture;
+        private string[] m_ListSeparator = null;
         private List<string> m_BracketHeap = new List<string>();
         private List<ValueProvider> m_Commands = new List<ValueProvider>();
         private List<ICommandParser> m_CommandParser = new List<ICommandParser>();
         private Dictionary<string, Func<ParameterList, double>> m_Functions = new Dictionary<string, Func<ParameterList, double>>();
-        public ParsingContext() : this(true) { }
-        public ParsingContext(bool aAddMathMethods)
+        public string[] ListSepatator
         {
+            get
+            {
+                if (m_ListSeparator == null || m_ListSeparator[0] != m_Culture.TextInfo.ListSeparator)
+                    m_ListSeparator = new string[] { m_Culture.TextInfo.ListSeparator };
+                return m_ListSeparator;
+            }
+        }
+        public ParsingContext() : this(true, CultureInfo.CurrentCulture) { }
+        public ParsingContext(bool aAddMathMethods, bool aUseInvariantCulture) : this(true, aUseInvariantCulture?CultureInfo.InvariantCulture:CultureInfo.CurrentCulture) { }
+        public ParsingContext(bool aAddMathMethods, CultureInfo aCulture)
+        {
+            m_Culture = aCulture;
             if (aAddMathMethods)
                 AddMathFunctions();
         }
@@ -539,7 +537,7 @@ namespace B83.LogicExpressionParser
             {
                 string inner = aExpression.Substring(aIndex + 1, closing - aIndex - 1);
                 m_BracketHeap.Add(inner);
-                string sub = "$B" + (m_BracketHeap.Count - 1) + ";";
+                string sub = "$B" + (m_BracketHeap.Count - 1) + "§";
                 aExpression = aExpression.Substring(0, aIndex) + sub + aExpression.Substring(closing + 1);
             }
             else throw new ParseException("Bracket not closed!");
@@ -550,13 +548,12 @@ namespace B83.LogicExpressionParser
             if (closing > aIndex + 1)
             {
                 string inner = aExpression.Substring(aIndex + 1, closing - aIndex - 1).Trim();
-                string sub = "$C" + (m_Commands.Count) + ";";
+                string sub = "$C" + (m_Commands.Count) + "§";
                 m_Commands.Add(ParseCommand(aParser, inner));
                 aExpression = aExpression.Substring(0, aIndex) + sub + aExpression.Substring(closing + 1);
             }
             else throw new ParseException("Bracket not closed!");
         }
-
         protected virtual ValueProvider ParseCommand(Parser aParser, string aCommand)
         {
             for (int i = 0; i < m_CommandParser.Count; i++)
@@ -567,7 +564,6 @@ namespace B83.LogicExpressionParser
             }
             return new ValueProvider();
         }
-
         public virtual void Preprocess(Parser aParser, ref string aExpression)
         {
             aExpression = aExpression.Trim();
@@ -587,7 +583,7 @@ namespace B83.LogicExpressionParser
         private bool ParseToken(ref string aExpression, out char aTokenType, out int aIndex)
         {
             int index2a = aExpression.IndexOf("$");
-            int index2b = aExpression.IndexOf(';');
+            int index2b = aExpression.IndexOf('§');
             if (index2a >= 0 && index2b >= 3)
             {
                 aTokenType = aExpression[index2a + 1];
@@ -620,7 +616,6 @@ namespace B83.LogicExpressionParser
                 return m_Commands[index];
             return null;
         }
-
         public Func<ParameterList, double> GetFunction(string fName)
         {
             Func<ParameterList, double> f;
@@ -634,6 +629,10 @@ namespace B83.LogicExpressionParser
                 m_Functions[aName] = aFunc;
             else
                 m_Functions.Add(aName, aFunc);
+        }
+        public bool TryParseDouble(string aText, out double aValue)
+        {
+            return double.TryParse(aText, NumberStyles.Float, m_Culture.NumberFormat, out aValue);
         }
     }
     #endregion Expression & Parsing Context
@@ -800,12 +799,12 @@ namespace B83.LogicExpressionParser
                 return new ConstantBool { constantValue = false };
             }
 
-
             string bracketContent = m_ParsingContext.GetBracket(ref aExpression);
             if (!string.IsNullOrEmpty(bracketContent))
             {
                 return ParseLogicResult(bracketContent, aMaxRecursion);
             }
+
             ValueProvider value = m_ParsingContext.GetCommand(ref aExpression);
             if (value != null)
             {
@@ -826,10 +825,11 @@ namespace B83.LogicExpressionParser
         {
             --aMaxRecursion;
             m_ParsingContext.Preprocess(this, ref aExpression);
+            string[] listSeparator = m_ParsingContext.ListSepatator;
             aExpression = aExpression.Trim();
-            if (aExpression.Contains(","))
+            if (aExpression.Contains(listSeparator[0]))
             {
-                string[] parts = aExpression.Split(',');
+                string[] parts = aExpression.Split(listSeparator, StringSplitOptions.None);
                 var paramList = new ParameterList();
                 paramList.inputs.Capacity = parts.Length;
                 for (int i = 0; i < parts.Length; i++)
@@ -921,12 +921,13 @@ namespace B83.LogicExpressionParser
                     return new CustomFunction(func, new ParameterList(param));
                 }
             }
-            string bracketContent = m_ParsingContext.GetBracket(ref aExpression);
 
+            string bracketContent = m_ParsingContext.GetBracket(ref aExpression);
             if (!string.IsNullOrEmpty(bracketContent))
             {
                 return ParseNumber(bracketContent, aMaxRecursion);
             }
+
             ValueProvider value = m_ParsingContext.GetCommand(ref aExpression);
             if (value != null)
             {
@@ -934,7 +935,7 @@ namespace B83.LogicExpressionParser
             }
 
             double doubleValue;
-            if (double.TryParse(aExpression.Trim(), out doubleValue))
+            if (m_ParsingContext.TryParseDouble(aExpression.Trim(), out doubleValue))
             {
                 return new ConstantNumber { constantValue = doubleValue };
             }
@@ -943,7 +944,6 @@ namespace B83.LogicExpressionParser
             {
                 return context.GetVariable(aExpression.Trim());
             }
-
             if (aMaxRecursion > 0)
                 return new BoolToNumber { val = ParseLogicResult(aExpression, aMaxRecursion) };
             throw new ParseException("Unexpected end / expression");
@@ -982,9 +982,6 @@ namespace B83.LogicExpressionParser
                 return false;
             if (aExpression.Contains(" "))
                 return false;
-            //if (!"abcdefghijklmnopqrstuvwxyz_".Contains(aExpression.Substring(0, 1).ToLower()))
-            //    return false;
-            // this is better for performance and garbage generation
             char firstLetter = char.ToLower(aExpression[0]);
             if (firstLetter != '_' && (firstLetter < 'a' || firstLetter > 'z'))
                 return false;
