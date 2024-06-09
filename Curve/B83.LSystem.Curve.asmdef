@@ -1,0 +1,16 @@
+{
+    "name": "B83.LSystem.Curve",
+    "rootNamespace": "",
+    "references": [
+        "GUID:e603bdf65133a4e90b88b173c85000be"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
