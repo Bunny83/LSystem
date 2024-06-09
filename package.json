@@ -1,0 +1,14 @@
+{
+  "name": "com.b83.lsystem",
+  "version": "1.0.0",
+  "displayName": "LSystem",
+  "description": "LogicExpressionParser.cs allows to parse logic or numeric expressions given as string into a custom expression tree",
+  "unity": "2019.1",
+  "documentationUrl": "https://github.com/Bunny83/LSystem",
+  "changelogUrl": "https://github.com/Bunny83/LSystem",
+  "licensesUrl": "https://github.com/Bunny83/LSystem",
+  "author": {
+    "name": "Bunny83",
+    "url": "https://github.com/Bunny83"
+  }
+}
